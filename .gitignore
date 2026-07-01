@@ -20,3 +20,6 @@ metrics/**
 workloads/**/*.jsonl
 reports/
 models/
+
+references/
+.env

@@ -1,0 +1,27 @@
+services:
+  api:
+    build: .
+    command: uvicorn m3l2.app.main:app --host 0.0.0.0 --port 8000
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://m3l2:m3l2@postgres:5432/m3l2}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./artifacts:/app/artifacts
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: m3l2
+      POSTGRES_USER: m3l2
+      POSTGRES_PASSWORD: m3l2
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+volumes:
+  postgres_data:

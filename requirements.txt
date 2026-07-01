@@ -9,6 +9,9 @@ pydantic
 pyarrow
 pyyaml
 scikit-learn==1.5.1
+SQLAlchemy>=2.0
+psycopg[binary]>=3.1
+APScheduler>=3.10
 torch
 uvicorn[standard]
 xgboost
@@ -16,3 +19,5 @@ typing
 dataclasses
 pyspark
 statsmodels
+pytest
+httpx

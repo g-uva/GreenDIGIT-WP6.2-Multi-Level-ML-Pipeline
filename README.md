@@ -122,6 +122,50 @@ mes server-side before padding missing inputs.
 - FastAPI server `/predict` endpoint with a `{"power_forecast":<number>}` result.
 - MQTT + Kafka + Flink streaming pipeline
 
+## M3L2 MVP Production Path
+
+The scoped MVP lives under `m3l2/`. It does four things:
+
+- fetches execution records from CNR MetricsDB/EIMPS;
+- stores normalized records in SQL;
+- trains an `energy_wh` model every 6 hours;
+- serves forecasts through FastAPI.
+
+Run it:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+The Docker image uses `requirements-m3l2.txt`, a small runtime dependency set for the API. The broader `requirements.txt` still contains the heavier research stack.
+
+Use it:
+
+```bash
+# Service status and active model.
+curl http://localhost:8000/health
+
+# Fetch and store execution records.
+curl -X POST http://localhost:8000/ingest/run \
+  -H "Content-Type: application/json" \
+  -d '{"start_ts":"2026-01-01T00:00:00Z","end_ts":"2026-01-02T00:00:00Z"}'
+
+# Train manually.
+curl -X POST http://localhost:8000/train
+
+# Forecast site energy.
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"site_ids":null,"horizon":"24h","step":"1h","use_cache":true}'
+
+# Inspect models and operational counters.
+curl http://localhost:8000/models
+curl http://localhost:8000/metrics
+```
+
+Set `M3L2_ENABLE_SCHEDULER=false` in `.env` to disable automatic ingestion and training.
+
 ### MQTT + Kafka + Flink pipeline tutorial (development)
 1. Install `docker-compose` with all containerised services (MQTT + Kafka).
 ```bash
