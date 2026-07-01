@@ -130,6 +130,7 @@ The scoped MVP lives under `m3l2/`. It does four things:
 - stores normalized execution records plus Site Adapter profile/status snapshots in SQL;
 - trains an `energy_wh` model every 6 hours;
 - serves energy, generic efficiency, and dynamic site-status forecasts through FastAPI.
+- exposes an EIMPS-style login page for 24-hour JWT tokens.
 
 Run it:
 
@@ -166,6 +167,43 @@ curl http://localhost:8000/metrics
 ```
 
 Set `M3L2_ENABLE_SCHEDULER=false` in `.env` to disable automatic ingestion and training.
+
+### L2 Site Adapter login and tokens
+
+Open the login page:
+
+```bash
+http://localhost/auth/login
+```
+
+Token issuance is gated by `allowed_emails.txt` at the repository root. First login sets the password for an allowed email; subsequent logins must use the same password.
+
+Supported allow-list formats:
+
+```text
+email@example.org
+email@example.org,SITE-ID,reader
+email@example.org,SITE-ID,publisher
+email@example.org,SITE-ID,site_admin
+email@example.org,SITE-ID,reader|publisher
+```
+
+JSON clients can request tokens directly:
+
+```bash
+curl -X POST http://localhost/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@uth.gr","password":"change-me","site_id":"UTH-IOT","role":"site_admin"}'
+```
+
+Use the returned token on protected L2 endpoints:
+
+```bash
+curl http://localhost/auth/verify-token \
+  -H "Authorization: Bearer <token>"
+```
+
+Tokens expire after 24 hours.
 
 For local validation, `raw_data/summary_sites_15m.csv` is a 15-minute aggregate, not raw execution-unit data. Expected columns:
 

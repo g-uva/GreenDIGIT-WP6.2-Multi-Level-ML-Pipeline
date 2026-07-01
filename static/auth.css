@@ -1,0 +1,199 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+    color: #25302b;
+    background: #f5f7f4;
+}
+
+.auth-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.auth-panel {
+    width: 100%;
+    max-width: 500px;
+    background: #fff;
+    border: 1px solid #dfe7df;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    padding: 36px;
+}
+
+.auth-panel-wide {
+    max-width: 760px;
+}
+
+.auth-logo {
+    display: block;
+    width: 104px;
+    height: auto;
+    margin: 0 auto 20px;
+}
+
+h1 {
+    color: #215f32;
+    font-size: 1.65rem;
+    line-height: 1.2;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+h2 {
+    color: #38423b;
+    font-size: 1.15rem;
+    font-weight: 650;
+    text-align: center;
+    margin: 0 0 24px;
+}
+
+form {
+    display: grid;
+    gap: 14px;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    border: 1px solid #cbd8cf;
+    border-radius: 6px;
+    padding: 12px 14px;
+    font: inherit;
+    color: #25302b;
+    background: #fff;
+}
+
+textarea {
+    min-height: 190px;
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.86rem;
+    line-height: 1.45;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid #8fbf9b;
+    border-color: #215f32;
+}
+
+button,
+.button-link {
+    min-height: 44px;
+    border: 0;
+    border-radius: 6px;
+    padding: 11px 16px;
+    background: #215f32;
+    color: #fff;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+}
+
+button:hover,
+.button-link:hover {
+    filter: brightness(0.94);
+}
+
+.button-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.button-link.secondary {
+    background: #1f5f8f;
+}
+
+.info {
+    margin-top: 20px;
+    border-left: 4px solid #215f32;
+    background: #f5f7f4;
+    border-radius: 6px;
+    padding: 14px 16px;
+    color: #58645d;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.error {
+    margin-top: 16px;
+    border-left: 4px solid #b42318;
+    background: #fff4f2;
+    color: #8a1f15;
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 0.92rem;
+}
+
+.muted {
+    color: #58645d;
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.token-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 18px 0;
+}
+
+.token-meta div {
+    background: #f5f7f4;
+    border: 1px solid #dfe7df;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.token-meta dt {
+    color: #58645d;
+    font-size: 0.78rem;
+}
+
+.token-meta dd {
+    margin-top: 4px;
+    font-weight: 650;
+}
+
+.token-label {
+    display: block;
+    font-weight: 650;
+    margin-bottom: 8px;
+}
+
+.footer-logos {
+    margin-top: 22px;
+    display: flex;
+    justify-content: center;
+}
+
+.footer-logos img {
+    max-width: 260px;
+    height: auto;
+}
+
+@media (max-width: 640px) {
+    .auth-panel {
+        padding: 26px 20px;
+    }
+
+    .button-row,
+    .token-meta {
+        grid-template-columns: 1fr;
+    }
+}

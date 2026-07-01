@@ -7,16 +7,31 @@ from typing import Any
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import Body, Depends, FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from m3l2.app.config import get_settings
-from m3l2.app.db import ExecutionRecord, ForecastCache, ModelRegistry, SessionLocal, SiteProfile, SiteStatusSnapshot, create_tables, utc_now
+from m3l2.app.db import (
+    ExecutionRecord,
+    ForecastCache,
+    ModelRegistry,
+    RegisteredSite,
+    SessionLocal,
+    SiteProfile,
+    SiteSnapshot,
+    SiteStatusSnapshot,
+    create_tables,
+    utc_now,
+)
 from m3l2.app.schemas import IngestRunRequest, PredictRequest
+from m3l2.auth.router import router as auth_router
+from m3l2.broker_mock.router import router as mock_broker_router
 from m3l2.inference.predict import predict as run_predict
 from m3l2.ingestion.jobs import run_ingestion
 from m3l2.ingestion.site_adapter import normalise_site_profile, normalise_site_status
+from m3l2.site_adapter.control_plane import router as site_adapter_router
 from m3l2.training.registry import get_active_model, get_model_by_version, list_models, serialise_model
 from m3l2.training.train import train_model
 
@@ -87,7 +102,29 @@ async def lifespan(app: FastAPI):
         logger.info("Stopped M3L2 scheduler")
 
 
-app = FastAPI(title="M3L2 MVP API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="GreenDIGIT M3L2 MVP API",
+    version="0.1.0",
+    lifespan=lifespan,
+    description=(
+        "M3L2 L2DB, Site Adapter Control Plane, prediction API, and mock broker flow.\n\n"
+        "**Authentication**\n\n"
+        "- Open `/auth/login` to obtain a 24-hour JWT using email and password.\n"
+        "- The first login registers a password only if the email is listed in `allowed_emails.txt`.\n"
+        "- Use the token as `Authorization: Bearer <token>` on protected L2 endpoints.\n"
+        "- JSON token clients can call `POST /auth/token` or `GET /auth/token`."
+    ),
+    swagger_ui_parameters={"persistAuthorization": True},
+)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.include_router(auth_router)
+app.include_router(site_adapter_router)
+app.include_router(mock_broker_router)
+
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/auth/login")
 
 
 @app.get("/health")
@@ -154,6 +191,8 @@ def metrics(session: Session = Depends(get_db)) -> dict[str, Any]:
         "site_profiles_count": session.scalar(select(func.count()).select_from(SiteProfile)),
         "site_status_snapshots_count": session.scalar(select(func.count()).select_from(SiteStatusSnapshot)),
         "models_count": session.scalar(select(func.count()).select_from(ModelRegistry)),
+        "registered_sites_count": session.scalar(select(func.count()).select_from(RegisteredSite)),
+        "site_snapshots_count": session.scalar(select(func.count()).select_from(SiteSnapshot)),
         "active_model_version": active.version if active else None,
         "latest_ingested_at": latest_ingested_at.isoformat() if latest_ingested_at else None,
         "forecast_cache_count": session.scalar(select(func.count()).select_from(ForecastCache)),

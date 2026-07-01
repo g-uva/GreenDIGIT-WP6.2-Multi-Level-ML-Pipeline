@@ -10,7 +10,7 @@ import pandas as pd
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from m3l2.app.db import ExecutionRecord, SessionLocal, SiteProfile, SiteStatusSnapshot, create_tables, utc_now
+from m3l2.app.db import ExecutionRecord, SessionLocal, SiteProfile, SiteSnapshot, SiteStatusSnapshot, create_tables, utc_now
 from m3l2.app.schemas import PredictRequest
 from m3l2.inference.cache import get_valid_cache, store_cache
 from m3l2.training.registry import get_active_model
@@ -59,6 +59,14 @@ def _latest_site_status(session: Session, site_id: str) -> SiteStatusSnapshot | 
         select(SiteStatusSnapshot)
         .where(SiteStatusSnapshot.site_id == site_id)
         .order_by(desc(SiteStatusSnapshot.timestamp))
+    ).scalars().first()
+
+
+def _latest_l2_site_snapshot(session: Session, site_id: str) -> SiteSnapshot | None:
+    return session.execute(
+        select(SiteSnapshot)
+        .where(SiteSnapshot.site_id == site_id)
+        .order_by(desc(SiteSnapshot.ts), desc(SiteSnapshot.id))
     ).scalars().first()
 
 
@@ -155,12 +163,30 @@ def _status_forecast(status: SiteStatusSnapshot | None, profile: SiteProfile | N
     ]
 
 
+def _latest_l2_status_metadata(session: Session, site_id: str) -> dict[str, Any]:
+    snapshot = _latest_l2_site_snapshot(session, site_id)
+    if snapshot is None:
+        return {"availability": None, "usage": None, "efficiency": None, "snapshot_ts": None}
+    return {
+        "availability": snapshot.availability or {},
+        "usage": snapshot.usage or {},
+        "efficiency": snapshot.efficiency or {},
+        "snapshot_ts": snapshot.ts.isoformat() if snapshot.ts else None,
+    }
+
+
+def _attach_l2_status_metadata(session: Session, predictions: list[dict[str, Any]]) -> None:
+    for prediction in predictions:
+        prediction["latest_site_status"] = _latest_l2_status_metadata(session, prediction["site_id"])
+
+
 def _predict_with_session(request: PredictRequest | dict[str, Any], session: Session) -> dict[str, Any]:
     payload = _model_dump(request)
     horizon = payload.get("horizon") or "24h"
     step = payload.get("step") or "1h"
     workload = payload.get("workload")
     use_cache = bool(payload.get("use_cache", True))
+    include_site_status = bool(payload.get("include_site_status", False))
     horizon_delta = _parse_duration(horizon)
     step_delta = _parse_duration(step)
     if step_delta.total_seconds() <= 0 or horizon_delta.total_seconds() <= 0:
@@ -189,6 +215,8 @@ def _predict_with_session(request: PredictRequest | dict[str, Any], session: Ses
                 }
             )
         if cached_predictions and len(cached_predictions) == len(sites):
+            if include_site_status:
+                _attach_l2_status_metadata(session, cached_predictions)
             return {
                 "created_at": created_at.isoformat(),
                 "horizon": horizon,
@@ -234,6 +262,8 @@ def _predict_with_session(request: PredictRequest | dict[str, Any], session: Ses
         )
 
     session.commit()
+    if include_site_status:
+        _attach_l2_status_metadata(session, predictions)
     return {
         "created_at": created_at.isoformat(),
         "horizon": horizon,

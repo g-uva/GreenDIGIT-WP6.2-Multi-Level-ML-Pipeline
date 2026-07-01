@@ -93,6 +93,50 @@ class SiteStatusSnapshot(Base):
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class RegisteredSite(Base):
+    __tablename__ = "registered_sites"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    site_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    site_name: Mapped[str] = mapped_column(String, nullable=False)
+    ri_type: Mapped[str] = mapped_column(String, default="unknown")
+    adapter_base_url: Mapped[str] = mapped_column(String, nullable=False)
+    contact_email: Mapped[str] = mapped_column(String, nullable=False)
+    auth_type: Mapped[str] = mapped_column(String, default="jwt")
+    auth_config: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    registered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    site_metadata: Mapped[dict[str, Any] | None] = mapped_column("metadata", JSON, nullable=True)
+
+
+class SiteSnapshot(Base):
+    __tablename__ = "site_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    site_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    capabilities: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    availability: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    usage: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    efficiency: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    status: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    source: Mapped[str] = mapped_column(String, nullable=False)
+    quality: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    raw_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
+
+class AuthUser(Base):
+    __tablename__ = "auth_users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
 class ModelRegistry(Base):
     __tablename__ = "model_registry"
 

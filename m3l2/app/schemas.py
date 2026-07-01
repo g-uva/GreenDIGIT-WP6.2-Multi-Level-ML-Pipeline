@@ -18,6 +18,7 @@ class PredictRequest(BaseModel):
     step: str = "1h"
     workload: dict[str, Any] | None = None
     use_cache: bool = True
+    include_site_status: bool = False
 
 
 class SiteProfileIn(BaseModel):

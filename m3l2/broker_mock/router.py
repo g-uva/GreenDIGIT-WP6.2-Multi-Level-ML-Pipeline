@@ -1,0 +1,85 @@
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from m3l2.app.schemas import PredictRequest
+from m3l2.inference.predict import predict as run_predict
+from m3l2.site_adapter.control_plane import forward_workload_to_site, get_db
+
+router = APIRouter(prefix="/mock-broker", tags=["mock-broker"])
+
+
+class MockBrokerSubmitRequest(BaseModel):
+    workload_id: str
+    candidate_sites: list[str]
+    horizon: str = "24h"
+    step: str = "1h"
+    requirements: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+def _first_forecast_value(prediction: dict[str, Any]) -> float | None:
+    forecast = prediction.get("forecast") or []
+    if not forecast:
+        return None
+    first = forecast[0]
+    if not isinstance(first, dict) or first.get("value") is None:
+        return None
+    return float(first["value"])
+
+
+def _latest_availability_status(prediction: dict[str, Any]) -> str:
+    latest = prediction.get("latest_site_status") or {}
+    availability = latest.get("availability") or {}
+    status = availability.get("status") or availability.get("operational_status") or ""
+    return str(status).lower()
+
+
+def _select_best_site(predictions: list[dict[str, Any]]) -> tuple[str, dict[str, Any], float]:
+    candidates: list[tuple[str, dict[str, Any], float]] = []
+    for prediction in predictions:
+        if _latest_availability_status(prediction) in {"down", "maintenance"}:
+            continue
+        value = _first_forecast_value(prediction)
+        if value is None:
+            continue
+        candidates.append((prediction["site_id"], prediction, value))
+    if not candidates:
+        raise HTTPException(status_code=409, detail="No candidate site is available for submission")
+    return min(candidates, key=lambda item: item[2])
+
+
+@router.post("/submit")
+async def submit_to_best_site(payload: MockBrokerSubmitRequest, session: Session = Depends(get_db)) -> dict[str, Any]:
+    prediction_request = PredictRequest(
+        site_ids=payload.candidate_sites,
+        horizon=payload.horizon,
+        step=payload.step,
+        workload={"requirements": payload.requirements, **(payload.metadata or {})},
+        include_site_status=True,
+    )
+    prediction_result = run_predict(prediction_request)
+    if prediction_result.get("status") == "no_active_model":
+        raise HTTPException(status_code=503, detail=prediction_result["detail"])
+
+    site_id, prediction, first_value = _select_best_site(prediction_result.get("predictions") or [])
+    workload_payload = {
+        "workload_id": payload.workload_id,
+        "workload_type": payload.metadata.get("workload_type", "unknown"),
+        "requirements": payload.requirements,
+        "metadata": payload.metadata,
+    }
+    submission_response = await forward_workload_to_site(session, site_id, workload_payload)
+    return {
+        "selected_site": site_id,
+        "reason": "lowest_predicted_energy_wh",
+        "prediction_summary": {
+            "first_forecast_energy_wh": first_value,
+            "selected_prediction": prediction,
+        },
+        "submission_response": submission_response,
+    }

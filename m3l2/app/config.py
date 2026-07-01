@@ -27,6 +27,12 @@ class Settings:
     model_dir: Path = Path(os.getenv("M3L2_MODEL_DIR", "./artifacts/models"))
     min_training_records: int = int(os.getenv("M3L2_MIN_TRAINING_RECORDS", "20"))
     enable_scheduler: bool = _bool_env("M3L2_ENABLE_SCHEDULER", True)
+    jwt_secret: str = os.getenv("JWT_SECRET", "")
+    jwt_token_ttl_hours: int = int(os.getenv("JWT_TOKEN_TTL_HOURS", "24"))
+    allowed_emails_path: str = os.getenv("ALLOWED_EMAILS_PATH", "allowed_emails.txt")
+    site_adapter_allowed_email_domains: str = os.getenv("SITE_ADAPTER_ALLOWED_EMAIL_DOMAINS", "uva.nl,uth.gr")
+    egi_checkin_issuer: str = os.getenv("EGI_CHECKIN_ISSUER", "")
+    egi_checkin_audience: str = os.getenv("EGI_CHECKIN_AUDIENCE", "")
 
     @property
     def cnr_database_url(self) -> str | None:
@@ -37,7 +43,10 @@ class Settings:
             f"@{self.cnr_host}:{self.cnr_port}/{self.cnr_database}"
         )
 
+    @property
+    def allowed_site_adapter_email_domains(self) -> set[str]:
+        return {domain.strip().lower() for domain in self.site_adapter_allowed_email_domains.split(",") if domain.strip()}
+
 
 def get_settings() -> Settings:
     return Settings()
-

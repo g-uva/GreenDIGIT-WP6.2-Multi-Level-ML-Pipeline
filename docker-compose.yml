@@ -7,8 +7,12 @@ services:
         required: false
     environment:
       DATABASE_URL: postgresql+psycopg://m3l2:m3l2@postgres:5432/m3l2
+      JWT_SECRET: ${JWT_SECRET}
+      SITE_ADAPTER_ALLOWED_EMAIL_DOMAINS: ${SITE_ADAPTER_ALLOWED_EMAIL_DOMAINS:-uva.nl,uth.gr}
+      EGI_CHECKIN_ISSUER: ${EGI_CHECKIN_ISSUER:-}
+      EGI_CHECKIN_AUDIENCE: ${EGI_CHECKIN_AUDIENCE:-}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       - postgres
     volumes:
