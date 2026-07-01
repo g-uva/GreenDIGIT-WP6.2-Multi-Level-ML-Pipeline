@@ -26,7 +26,7 @@ def get_valid_cache(
             ForecastCache.valid_until > utc_now(),
         )
         .order_by(ForecastCache.created_at.desc())
-    ).scalar_one_or_none()
+    ).scalars().first()
 
 
 def store_cache(
@@ -54,4 +54,3 @@ def store_cache(
     )
     session.add(row)
     return row
-

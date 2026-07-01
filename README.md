@@ -157,7 +157,8 @@ curl -X POST http://localhost:8000/train
 # Forecast site energy.
 curl -X POST http://localhost:8000/predict \
   -H "Content-Type: application/json" \
-  -d '{"site_ids":null,"horizon":"24h","step":"1h","use_cache":true}'
+  -d '{"site_ids":null,"horizon":"24h","step":"1h","use_cache":true}' \
+  | jq .
 
 # Inspect models and operational counters.
 curl http://localhost:8000/models
@@ -188,7 +189,34 @@ curl -X POST http://localhost:8000/predict \
   -d '{"site_ids":null,"horizon":"24h","step":"1h","workload":{"class":"batch","cpu_hours":8},"use_cache":true}'
 ```
 
-Prediction responses include `forecast`, `site_status_forecast`, and `efficiency` fields. The status forecast is a persistence baseline over the requested horizon: availability/free capacity, queue/provisioning delay, maintenance flag, and operational state.
+Format the response with `jq`:
+
+```bash
+curl -s -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"site_ids":null,"horizon":"24h","step":"1h","workload":{"class":"batch","cpu_hours":8},"use_cache":true}' \
+  | jq .
+```
+
+Brokering-oriented view:
+
+```bash
+curl -s -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"site_ids":null,"horizon":"24h","step":"1h","workload":{"class":"batch","cpu_hours":8},"use_cache":true}' \
+  | jq '.predictions[] | {
+      site_id,
+      energy_forecast: .forecast,
+      status: .site_status_forecast,
+      efficiency
+    }'
+```
+
+Prediction responses include:
+
+- `forecast`: expected `energy_wh` over the requested horizon.
+- `site_status_forecast`: persistence baseline for availability/free capacity, queue/provisioning delay, maintenance flag, and operational state.
+- `efficiency`: expected energy per CPU-hour/GPU-hour and workload-class energy/carbon when workload descriptors are supplied.
 
 Mock Site Adapter availability data is available for local tests:
 
