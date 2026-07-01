@@ -127,9 +127,9 @@ mes server-side before padding missing inputs.
 The scoped MVP lives under `m3l2/`. It does four things:
 
 - fetches execution records from CNR MetricsDB/EIMPS;
-- stores normalized records in SQL;
+- stores normalized execution records plus Site Adapter profile/status snapshots in SQL;
 - trains an `energy_wh` model every 6 hours;
-- serves forecasts through FastAPI.
+- serves energy, generic efficiency, and dynamic site-status forecasts through FastAPI.
 
 Run it:
 
@@ -185,13 +185,47 @@ Forecast after training:
 ```bash
 curl -X POST http://localhost:8000/predict \
   -H "Content-Type: application/json" \
-  -d '{"site_ids":null,"horizon":"24h","step":"1h","use_cache":true}'
+  -d '{"site_ids":null,"horizon":"24h","step":"1h","workload":{"class":"batch","cpu_hours":8},"use_cache":true}'
+```
+
+Prediction responses include `forecast`, `site_status_forecast`, and `efficiency` fields. The status forecast is a persistence baseline over the requested horizon: availability/free capacity, queue/provisioning delay, maintenance flag, and operational state.
+
+Mock Site Adapter availability data is available for local tests:
+
+```text
+raw_data/mock_site_profiles.json
+raw_data/mock_site_status_snapshots.csv
+```
+
+Regenerate it from the aggregate validation CSV:
+
+```bash
+python3 scripts/generate_mock_site_availability.py --hours 168
+```
+
+Load it into the API database:
+
+```bash
+docker compose exec api python scripts/load_mock_site_status.py
+```
+
+Publish generic Site Adapter data directly:
+
+```bash
+curl -X POST "http://localhost:8000/site-profiles?adapter_type=iot" \
+  -H "Content-Type: application/json" \
+  -d '{"site_id":"SLICES-GR-UTH","location":"UTH","compute_capacity":32,"network_topology":"Mesh"}'
+
+curl -X POST "http://localhost:8000/site-status?adapter_type=openstack" \
+  -H "Content-Type: application/json" \
+  -d '{"site_id":"OPENSTACK-DEMO","timestamp":"2026-01-01T00:00:00Z","total_vcpus":256,"free_vcpus":120,"total_gpus":8,"free_gpus":2,"pending_vms":4,"vm_provisioning_delay_s":180}'
 ```
 
 Remove those example rows:
 
 ```bash
 curl -X DELETE "http://localhost:8000/control/execution-records?source=raw_data/summary_sites_15m.csv&dry_run=false"
+curl -X DELETE "http://localhost:8000/control/site-status?source=raw_data/summary_sites_15m.csv&dry_run=false"
 ```
 
 If the container was built before this helper script existed, rebuild the API service:

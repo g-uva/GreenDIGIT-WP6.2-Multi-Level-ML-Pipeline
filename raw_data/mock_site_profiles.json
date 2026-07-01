@@ -1,0 +1,70 @@
+[
+  {
+    "site_id": "site_ad3433ffac",
+    "ri_type": "iot",
+    "location": "MOCK-1",
+    "compute_capacity": 189840.0,
+    "gpu_capacity": 0.0,
+    "storage_capacity": 2048.0,
+    "network_topology": "Mesh",
+    "link_capacities": {
+      "uplink_mbps": 1000
+    },
+    "supported_workload_types": [
+      "batch",
+      "stream",
+      "ml"
+    ],
+    "energy_capabilities": {
+      "metering": "mock",
+      "cpu": true,
+      "gpu": false
+    },
+    "static_pue_baseline": 1.15
+  },
+  {
+    "site_id": "site_e726c7cce5",
+    "ri_type": "cloud",
+    "location": "MOCK-2",
+    "compute_capacity": 139568.0,
+    "gpu_capacity": 4.0,
+    "storage_capacity": 3072.0,
+    "network_topology": "Hybrid",
+    "link_capacities": {
+      "uplink_mbps": 1500
+    },
+    "supported_workload_types": [
+      "batch",
+      "stream",
+      "ml"
+    ],
+    "energy_capabilities": {
+      "metering": "mock",
+      "cpu": true,
+      "gpu": true
+    },
+    "static_pue_baseline": 1.2
+  },
+  {
+    "site_id": "site_f5bcf8a88a",
+    "ri_type": "grid",
+    "location": "MOCK-3",
+    "compute_capacity": 482400.0,
+    "gpu_capacity": 1.0,
+    "storage_capacity": 4096.0,
+    "network_topology": "Hybrid",
+    "link_capacities": {
+      "uplink_mbps": 2000
+    },
+    "supported_workload_types": [
+      "batch",
+      "cpu"
+    ],
+    "energy_capabilities": {
+      "metering": "mock",
+      "cpu": true,
+      "gpu": true
+    },
+    "static_pue_baseline": 1.25
+  }
+]

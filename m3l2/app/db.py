@@ -37,6 +37,62 @@ class ExecutionRecord(Base):
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class SiteProfile(Base):
+    __tablename__ = "site_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    site_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    ri_type: Mapped[str] = mapped_column(String, default="unknown")
+    location: Mapped[str | None] = mapped_column(String, nullable=True)
+    compute_capacity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    gpu_capacity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    storage_capacity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    network_topology: Mapped[str | None] = mapped_column(String, nullable=True)
+    link_capacities: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    supported_workload_types: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    energy_capabilities: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    static_pue_baseline: Mapped[float | None] = mapped_column(Float, nullable=True)
+    raw_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class SiteStatusSnapshot(Base):
+    __tablename__ = "site_status_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    site_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    ri_type: Mapped[str] = mapped_column(String, default="unknown")
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    operational_status: Mapped[str] = mapped_column(String, default="UP")
+    maintenance_flag: Mapped[bool] = mapped_column(Boolean, default=False)
+    scheduled_maintenance: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    node_availability: Mapped[float | None] = mapped_column(Float, nullable=True)
+    link_availability: Mapped[float | None] = mapped_column(Float, nullable=True)
+    stability_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    packet_loss: Mapped[float | None] = mapped_column(Float, nullable=True)
+    network_jitter: Mapped[float | None] = mapped_column(Float, nullable=True)
+    network_utilization: Mapped[float | None] = mapped_column(Float, nullable=True)
+    available_bandwidth: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cpu_util_avg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    gpu_util_avg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    free_cpu_capacity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    free_gpu_capacity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    queue_length: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    remaining_jobs: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    provisioning_delay_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    load_index: Mapped[float | None] = mapped_column(Float, nullable=True)
+    energy_consumed: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pue_estimate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    carbon_intensity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    energy_per_task_proxy: Mapped[float | None] = mapped_column(Float, nullable=True)
+    update_frequency: Mapped[float | None] = mapped_column(Float, nullable=True)
+    data_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    coverage_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+    stale_flag: Mapped[bool] = mapped_column(Boolean, default=False)
+    raw_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
 class ModelRegistry(Base):
     __tablename__ = "model_registry"
 

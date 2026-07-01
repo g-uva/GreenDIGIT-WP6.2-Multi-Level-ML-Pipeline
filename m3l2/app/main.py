@@ -6,16 +6,17 @@ from datetime import datetime, timezone
 from typing import Any
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from m3l2.app.config import get_settings
-from m3l2.app.db import ExecutionRecord, ForecastCache, ModelRegistry, SessionLocal, create_tables
+from m3l2.app.db import ExecutionRecord, ForecastCache, ModelRegistry, SessionLocal, SiteProfile, SiteStatusSnapshot, create_tables, utc_now
 from m3l2.app.schemas import IngestRunRequest, PredictRequest
 from m3l2.inference.predict import predict as run_predict
 from m3l2.ingestion.jobs import run_ingestion
+from m3l2.ingestion.site_adapter import normalise_site_profile, normalise_site_status
 from m3l2.training.registry import get_active_model, get_model_by_version, list_models, serialise_model
 from m3l2.training.train import train_model
 
@@ -37,6 +38,14 @@ def _parse_optional_ts(value: str | None) -> datetime | None:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def _serialise_dt(value: Any) -> Any:
+    return value.isoformat() if isinstance(value, datetime) else value
+
+
+def _serialise_row(row: Any) -> dict[str, Any]:
+    return {column.name: _serialise_dt(getattr(row, column.name)) for column in row.__table__.columns}
 
 
 def get_db() -> Session:
@@ -142,11 +151,73 @@ def metrics(session: Session = Depends(get_db)) -> dict[str, Any]:
     latest_ingested_at = session.execute(select(ExecutionRecord.ingested_at).order_by(desc(ExecutionRecord.ingested_at))).scalars().first()
     return {
         "execution_records_count": session.scalar(select(func.count()).select_from(ExecutionRecord)),
+        "site_profiles_count": session.scalar(select(func.count()).select_from(SiteProfile)),
+        "site_status_snapshots_count": session.scalar(select(func.count()).select_from(SiteStatusSnapshot)),
         "models_count": session.scalar(select(func.count()).select_from(ModelRegistry)),
         "active_model_version": active.version if active else None,
         "latest_ingested_at": latest_ingested_at.isoformat() if latest_ingested_at else None,
         "forecast_cache_count": session.scalar(select(func.count()).select_from(ForecastCache)),
     }
+
+
+@app.post("/site-profiles")
+def upsert_site_profiles(
+    payload: dict[str, Any] | list[dict[str, Any]] = Body(...),
+    adapter_type: str = "generic",
+    session: Session = Depends(get_db),
+) -> dict[str, Any]:
+    items = payload if isinstance(payload, list) else [payload]
+    upserted = 0
+    for item in items:
+        profile = normalise_site_profile(item, adapter_type=adapter_type)
+        existing = session.execute(select(SiteProfile).where(SiteProfile.site_id == profile["site_id"])).scalar_one_or_none()
+        profile["updated_at"] = utc_now()
+        if existing is None:
+            session.add(SiteProfile(**profile))
+        else:
+            for key, value in profile.items():
+                setattr(existing, key, value)
+        upserted += 1
+    session.commit()
+    return {"upserted": upserted, "adapter_type": adapter_type}
+
+
+@app.get("/site-profiles")
+def list_site_profiles(session: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    return [_serialise_row(row) for row in session.execute(select(SiteProfile).order_by(SiteProfile.site_id)).scalars()]
+
+
+@app.post("/site-status")
+def ingest_site_status(
+    payload: dict[str, Any] | list[dict[str, Any]] = Body(...),
+    adapter_type: str = "generic",
+    session: Session = Depends(get_db),
+) -> dict[str, Any]:
+    items = payload if isinstance(payload, list) else [payload]
+    inserted = 0
+    for item in items:
+        status = normalise_site_status(item, adapter_type=adapter_type)
+        session.add(SiteStatusSnapshot(**status, ingested_at=utc_now()))
+        inserted += 1
+    session.commit()
+    return {"inserted": inserted, "adapter_type": adapter_type}
+
+
+@app.get("/site-status/latest")
+def latest_site_status(site_id: str | None = None, session: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    sites = [site_id] if site_id else [
+        site for site in session.execute(select(SiteStatusSnapshot.site_id).distinct()).scalars().all() if site
+    ]
+    rows = []
+    for site in sites:
+        row = session.execute(
+            select(SiteStatusSnapshot)
+            .where(SiteStatusSnapshot.site_id == site)
+            .order_by(desc(SiteStatusSnapshot.timestamp))
+        ).scalars().first()
+        if row:
+            rows.append(_serialise_row(row))
+    return rows
 
 
 @app.delete("/control/execution-records")
@@ -179,4 +250,35 @@ def delete_execution_records(
             session.delete(row)
         session.commit()
 
+    return {"matched": len(matched), "deleted": 0 if dry_run else len(matched), "dry_run": dry_run}
+
+
+@app.delete("/control/site-status")
+def delete_site_status(
+    source: str | None = None,
+    site_id: str | None = None,
+    start_ts: str | None = None,
+    end_ts: str | None = None,
+    dry_run: bool = True,
+    session: Session = Depends(get_db),
+) -> dict[str, Any]:
+    query = select(SiteStatusSnapshot)
+    if site_id:
+        query = query.where(SiteStatusSnapshot.site_id == site_id)
+    start = _parse_optional_ts(start_ts)
+    end = _parse_optional_ts(end_ts)
+    if start:
+        query = query.where(SiteStatusSnapshot.timestamp >= start)
+    if end:
+        query = query.where(SiteStatusSnapshot.timestamp < end)
+
+    matched = []
+    for row in session.execute(query).scalars():
+        if source and (row.raw_json or {}).get("source_file") != source:
+            continue
+        matched.append(row)
+    if not dry_run:
+        for row in matched:
+            session.delete(row)
+        session.commit()
     return {"matched": len(matched), "deleted": 0 if dry_run else len(matched), "dry_run": dry_run}
