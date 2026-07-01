@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Any
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -27,6 +28,15 @@ def _schema_dump(model: Any) -> dict[str, Any]:
     if hasattr(model, "model_dump"):
         return model.model_dump()
     return model.dict()
+
+
+def _parse_optional_ts(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def get_db() -> Session:
@@ -137,3 +147,36 @@ def metrics(session: Session = Depends(get_db)) -> dict[str, Any]:
         "latest_ingested_at": latest_ingested_at.isoformat() if latest_ingested_at else None,
         "forecast_cache_count": session.scalar(select(func.count()).select_from(ForecastCache)),
     }
+
+
+@app.delete("/control/execution-records")
+def delete_execution_records(
+    source: str | None = None,
+    site_id: str | None = None,
+    start_ts: str | None = None,
+    end_ts: str | None = None,
+    dry_run: bool = True,
+    session: Session = Depends(get_db),
+) -> dict[str, Any]:
+    query = select(ExecutionRecord)
+    if site_id:
+        query = query.where(ExecutionRecord.site_id == site_id)
+    start = _parse_optional_ts(start_ts)
+    end = _parse_optional_ts(end_ts)
+    if start:
+        query = query.where(ExecutionRecord.start_ts >= start)
+    if end:
+        query = query.where(ExecutionRecord.start_ts < end)
+
+    matched = []
+    for row in session.execute(query).scalars():
+        if source and (row.raw_json or {}).get("source_file") != source:
+            continue
+        matched.append(row)
+
+    if not dry_run:
+        for row in matched:
+            session.delete(row)
+        session.commit()
+
+    return {"matched": len(matched), "deleted": 0 if dry_run else len(matched), "dry_run": dry_run}

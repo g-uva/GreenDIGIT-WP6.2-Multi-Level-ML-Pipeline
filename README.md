@@ -135,12 +135,12 @@ Run it:
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up --build -d
 ```
 
 The Docker image uses `requirements-m3l2.txt`, a small runtime dependency set for the API. The broader `requirements.txt` still contains the heavier research stack.
 
-Use it:
+Use the CNR/EIMPS ingestion path:
 
 ```bash
 # Service status and active model.
@@ -165,6 +165,40 @@ curl http://localhost:8000/metrics
 ```
 
 Set `M3L2_ENABLE_SCHEDULER=false` in `.env` to disable automatic ingestion and training.
+
+For local validation, `raw_data/summary_sites_15m.csv` is a 15-minute aggregate, not raw execution-unit data. Expected columns:
+
+```text
+bucket_15m,site_id,vo,activity,records,energy_wh,cfp_g,work,ncores
+```
+
+Load those aggregate rows into synthetic `execution_records` and trigger training:
+
+```bash
+docker compose exec api python scripts/load_raw_aggregate_and_train.py
+```
+
+This stores the rows with `status="aggregated"` and `raw_json.source_file="raw_data/summary_sites_15m.csv"`.
+
+Forecast after training:
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"site_ids":null,"horizon":"24h","step":"1h","use_cache":true}'
+```
+
+Remove those example rows:
+
+```bash
+curl -X DELETE "http://localhost:8000/control/execution-records?source=raw_data/summary_sites_15m.csv&dry_run=false"
+```
+
+If the container was built before this helper script existed, rebuild the API service:
+
+```bash
+docker compose up --build -d api
+```
 
 ### MQTT + Kafka + Flink pipeline tutorial (development)
 1. Install `docker-compose` with all containerised services (MQTT + Kafka).
