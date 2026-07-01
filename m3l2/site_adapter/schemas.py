@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-RIType = Literal["cloud", "iot", "network", "unknown"]
+RIType = Literal["cloud", "network", "grid"]
 AuthType = Literal["jwt", "egi_checkin", "none"]
 SnapshotSource = Literal["push", "pull"]
 
@@ -13,7 +13,7 @@ SnapshotSource = Literal["push", "pull"]
 class SiteRegistrationRequest(BaseModel):
     site_id: str
     site_name: str
-    ri_type: RIType = "unknown"
+    ri_type: RIType = "grid"
     adapter_base_url: str
     contact_email: str
     auth_type: AuthType = "jwt"

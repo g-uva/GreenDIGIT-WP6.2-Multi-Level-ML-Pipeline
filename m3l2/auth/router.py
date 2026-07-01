@@ -4,6 +4,7 @@ import base64
 import hashlib
 import html
 import hmac
+import re
 import secrets
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +24,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 VALID_ROLES = {"reader", "publisher", "site_admin"}
 DEFAULT_ALLOWED_EMAILS_PATH = Path("allowed_emails.txt")
+EMAIL_RE = re.compile(r"^[^@\s,]+@[^@\s,]+\.[^@\s,]+$")
 
 
 @dataclass(frozen=True)
@@ -77,7 +79,7 @@ def load_allowed_access(path: str | Path | None = None) -> dict[str, list[Allowe
             continue
         parts = [part.strip() for part in line.split(",")]
         email = _normalise_email(parts[0])
-        if not email:
+        if not EMAIL_RE.fullmatch(email):
             continue
         site_id = parts[1] if len(parts) > 1 and parts[1] else None
         roles = _parse_roles(parts[2] if len(parts) > 2 else None)

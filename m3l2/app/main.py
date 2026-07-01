@@ -32,6 +32,7 @@ from m3l2.inference.predict import predict as run_predict
 from m3l2.ingestion.jobs import run_ingestion
 from m3l2.ingestion.site_adapter import normalise_site_profile, normalise_site_status
 from m3l2.site_adapter.control_plane import router as site_adapter_router
+from m3l2.site_adapter.mock_l3 import router as mock_l3_router
 from m3l2.training.registry import get_active_model, get_model_by_version, list_models, serialise_model
 from m3l2.training.train import train_model
 
@@ -119,6 +120,7 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(auth_router)
 app.include_router(site_adapter_router)
+app.include_router(mock_l3_router)
 app.include_router(mock_broker_router)
 
 

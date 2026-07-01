@@ -287,6 +287,27 @@ curl -X POST "http://localhost:8000/site-status?adapter_type=openstack" \
   -d '{"site_id":"OPENSTACK-DEMO","timestamp":"2026-01-01T00:00:00Z","total_vcpus":256,"free_vcpus":120,"total_gpus":8,"free_gpus":2,"pending_vms":4,"vm_provisioning_delay_s":180}'
 ```
 
+Register an L2 site against the built-in mock L3 Site Adapter:
+
+```bash
+curl -X POST http://localhost/l2/sites/register \
+  -H "Authorization: Bearer <site_admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "site_id": "SLICES-GR-UTH",
+    "site_name": "SLICES-GR-UTH",
+    "ri_type": "grid",
+    "adapter_base_url": "http://127.0.0.1:8000/mock-l3/sites/SLICES-GR-UTH",
+    "contact_email": "greendigit@uth.gr",
+    "auth_type": "jwt",
+    "metadata": {
+      "eimps_site_name": "SLICES-GR-UTH"
+    }
+  }'
+```
+
+For L2 Site Adapter registration, `ri_type` is one of `cloud`, `network`, or `grid`.
+
 Remove those example rows:
 
 ```bash
