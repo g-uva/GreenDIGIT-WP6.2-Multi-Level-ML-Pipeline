@@ -287,11 +287,50 @@ curl -X POST "http://localhost:8000/site-status?adapter_type=openstack" \
   -d '{"site_id":"OPENSTACK-DEMO","timestamp":"2026-01-01T00:00:00Z","total_vcpus":256,"free_vcpus":120,"total_gpus":8,"free_gpus":2,"pending_vms":4,"vm_provisioning_delay_s":180}'
 ```
 
-Register an L2 site against the built-in mock L3 Site Adapter:
+### Built-in mock L3 Site Adapter
+
+The mock L3 adapter is built into the same FastAPI API container. You do not need a separate L3 container, process, broker, OpenStack monitor, or IoT monitor for the MVP validation flow.
+
+What must be running:
+
+- the `api` service from `docker compose up --build -d api`;
+- Postgres from the same Compose stack;
+- Nginx only if you want public HTTP on port `80`;
+- an allowed email in `allowed_emails.txt` with `site_admin` for the site you want to register.
+
+The mock L3 endpoints are public for inspection through Nginx:
+
+```bash
+curl http://localhost/mock-l3/sites/SLICES-GR-UTH/capabilities
+curl http://localhost/mock-l3/sites/SLICES-GR-UTH/availability
+curl "http://localhost/mock-l3/sites/SLICES-GR-UTH/usage?start=2026-06-30T00:00:00Z&end=2026-07-01T00:00:00Z&step=1h"
+curl "http://localhost/mock-l3/sites/SLICES-GR-UTH/efficiency?start=2026-06-30T00:00:00Z&end=2026-07-01T00:00:00Z"
+```
+
+When registering a site, use the internal API URL as `adapter_base_url` because the L2 client runs inside the API container:
+
+```text
+http://127.0.0.1:8000/mock-l3/sites/SLICES-GR-UTH
+```
+
+Get a `site_admin` token:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "greendigit@uth.gr",
+    "password": "your-password",
+    "site_id": "SLICES-GR-UTH",
+    "role": "site_admin"
+  }' | jq -r '.access_token')
+```
+
+Register an L2 site against the built-in mock L3 adapter:
 
 ```bash
 curl -X POST http://localhost/l2/sites/register \
-  -H "Authorization: Bearer <site_admin_token>" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "site_id": "SLICES-GR-UTH",
@@ -301,12 +340,32 @@ curl -X POST http://localhost/l2/sites/register \
     "contact_email": "greendigit@uth.gr",
     "auth_type": "jwt",
     "metadata": {
-      "eimps_site_name": "SLICES-GR-UTH"
+      "eimps_site_name": "SLICES-GR-UTH",
+      "execution_records_site_id": "site_e726c7cce5"
     }
   }'
 ```
 
-For L2 Site Adapter registration, `ri_type` is one of `cloud`, `network`, or `grid`.
+For L2 Site Adapter registration, `ri_type` is one of `cloud`, `network`, or `grid`. The registration rule requires the site to match an existing MetricsDB/EIMPS site, or to provide an approved mapping with `metadata.execution_records_site_id`. The current seeded local execution-record site IDs can be checked with:
+
+```bash
+docker compose exec postgres psql -U m3l2 -d m3l2 \
+  -c "SELECT site_id, count(*) FROM execution_records GROUP BY site_id ORDER BY count(*) DESC LIMIT 20;"
+```
+
+Pull from the mock L3 adapter into L2DB:
+
+```bash
+curl -X POST http://localhost/l2/sites/SLICES-GR-UTH/pull \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Read the stored snapshot:
+
+```bash
+curl http://localhost/l2/sites/SLICES-GR-UTH/latest
+curl http://localhost/l2/sites/SLICES-GR-UTH/availability
+```
 
 Remove those example rows:
 

@@ -299,7 +299,7 @@ async def forward_workload_to_site(session: Session, site_id: str, payload: dict
     return {"site_id": site_id, "forwarded": True, "site_response": site_response}
 
 
-@router.post("/{site_id}/submit-workload")
+@router.post("/{site_id}/submit-workload", include_in_schema=False)
 async def submit_workload(
     site_id: str,
     payload: WorkloadSubmissionRequest,

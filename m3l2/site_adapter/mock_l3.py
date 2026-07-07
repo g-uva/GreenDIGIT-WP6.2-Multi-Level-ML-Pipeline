@@ -5,14 +5,25 @@ from typing import Any
 
 from fastapi import APIRouter, Body
 
-router = APIRouter(prefix="/mock-l3/sites", tags=["mock-l3-site-adapter"])
+router = APIRouter(
+    prefix="/mock-l3/sites",
+    tags=["Mock L3 Site Adapter"],
+    responses={404: {"description": "Mock site endpoint not found"}},
+)
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-@router.get("/{site_id}/capabilities")
+@router.get(
+    "/{site_id}/capabilities",
+    summary="Mock L3 capabilities",
+    description=(
+        "Returns a static capabilities payload for L2 control-plane validation. "
+        "Use this as the target for a registered site's `adapter_base_url` during local tests."
+    ),
+)
 def capabilities(site_id: str) -> dict[str, Any]:
     return {
         "site_id": site_id,
@@ -29,7 +40,11 @@ def capabilities(site_id: str) -> dict[str, Any]:
     }
 
 
-@router.get("/{site_id}/availability")
+@router.get(
+    "/{site_id}/availability",
+    summary="Mock L3 availability",
+    description="Returns a static `status=up` availability payload for L2 pull tests.",
+)
 def availability(site_id: str) -> dict[str, Any]:
     return {
         "site_id": site_id,
@@ -43,7 +58,11 @@ def availability(site_id: str) -> dict[str, Any]:
     }
 
 
-@router.get("/{site_id}/usage")
+@router.get(
+    "/{site_id}/usage",
+    summary="Mock L3 usage",
+    description="Returns synthetic usage metrics for the requested time window and step.",
+)
 def usage(site_id: str, start: str | None = None, end: str | None = None, step: str = "1h") -> dict[str, Any]:
     return {
         "site_id": site_id,
@@ -57,7 +76,11 @@ def usage(site_id: str, start: str | None = None, end: str | None = None, step: 
     }
 
 
-@router.get("/{site_id}/efficiency")
+@router.get(
+    "/{site_id}/efficiency",
+    summary="Mock L3 efficiency",
+    description="Returns synthetic PUE, carbon intensity, and energy-per-work metrics.",
+)
 def efficiency(site_id: str, start: str | None = None, end: str | None = None) -> dict[str, Any]:
     return {
         "site_id": site_id,
@@ -70,7 +93,12 @@ def efficiency(site_id: str, start: str | None = None, end: str | None = None) -
     }
 
 
-@router.post("/{site_id}/submit-workload")
+@router.post(
+    "/{site_id}/submit-workload",
+    summary="Mock L3 workload submission",
+    description="Accepts any workload payload and returns a mock accepted submission response.",
+    include_in_schema=False,
+)
 def submit_workload(site_id: str, payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
     return {
         "site_id": site_id,

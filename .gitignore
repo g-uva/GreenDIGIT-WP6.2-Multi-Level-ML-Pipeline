@@ -25,3 +25,4 @@ references/
 .env
 
 allowed_emails.txt
+scripts/example-requests.sh

@@ -214,6 +214,10 @@ def _token_result_html(payload: dict[str, Any]) -> HTMLResponse:
                 <a class="button-link" href="/auth/login">Generate Another Token</a>
                 <a class="button-link secondary" href="/docs">Open API Docs</a>
             </div>
+            <footer class="grant-footer">
+                <p>This work is funded from the European Union's Horizon Europe research and innovation programme through the <a href="https://greendigit-project.eu/" target="_blank" rel="noopener">GreenDIGIT project</a>, under Grant Agreement No. <a href="https://cordis.europa.eu/project/id/101131207" target="_blank" rel="noopener">101131207</a>.</p>
+                <img src="/static/EN-Funded-by-the-EU-POS-2.png" alt="Funded by the European Union">
+            </footer>
         </section>
     </main>
 </body>
@@ -251,11 +255,13 @@ def login_page() -> HTMLResponse:
             </form>
             <p id="error" class="error" hidden></p>
             <div class="info">
-                <p>First login sets your password if your email is present in <code>allowed_emails.txt</code>. Tokens are valid for 24 hours.</p>
+                <p>First login sets your password if your email is registered. Tokens are valid for 24 hours.</p>
+                <p>If your login does not work, please contact g.j.teixeiradepinhoferreira@uva.nl</p>
             </div>
-            <div class="footer-logos">
+            <footer class="grant-footer">
+                <p>This work is funded from the European Union's Horizon Europe research and innovation programme through the <a href="https://greendigit-project.eu/" target="_blank" rel="noopener">GreenDIGIT project</a>, under Grant Agreement No. <a href="https://cordis.europa.eu/project/id/101131207" target="_blank" rel="noopener">101131207</a>.</p>
                 <img src="/static/EN-Funded-by-the-EU-POS-2.png" alt="Funded by the European Union">
-            </div>
+            </footer>
         </section>
     </main>
     <script>

@@ -113,8 +113,42 @@ app = FastAPI(
         "- Open `/auth/login` to obtain a 24-hour JWT using email and password.\n"
         "- The first login registers a password only if the email is listed in `allowed_emails.txt`.\n"
         "- Use the token as `Authorization: Bearer <token>` on protected L2 endpoints.\n"
-        "- JSON token clients can call `POST /auth/token` or `GET /auth/token`."
+        "- JSON token clients can call `POST /auth/token` or `GET /auth/token`.\n\n"
+        "**Built-in mock L3 Site Adapter**\n\n"
+        "- No separate container is required; it runs inside this FastAPI service.\n"
+        "- Register a test site with `adapter_base_url` set to "
+        "`http://127.0.0.1:8000/mock-l3/sites/{site_id}` so L2 pull calls loop back to the mock.\n"
+        "- The mock exposes `/capabilities`, `/availability`, `/usage`, and `/efficiency` for snapshot validation.\n"
+        "- For public testing through Nginx, browse `/mock-l3/sites/{site_id}/capabilities`; for registered "
+        "adapter callbacks use the internal `127.0.0.1:8000` URL."
     ),
+    openapi_tags=[
+        {
+            "name": "Auth",
+            "description": (
+                "EIMPS-style login endpoints. Obtain a 24-hour JWT from `/auth/login` or `/auth/token`, "
+                "then use `Authorization: Bearer <token>` on protected L2 endpoints."
+            ),
+        },
+        {
+            "name": "l2-site-adapter",
+            "description": (
+                "L2 Site Adapter Control Plane: register sites, push/pull snapshots, read latest L2DB data, "
+                "and proxy workload submissions to registered L3 adapters."
+            ),
+        },
+        {
+            "name": "Mock L3 Site Adapter",
+            "description": (
+                "Built-in mock L3 adapter for validation. It runs in the same API container. "
+                "Use `http://127.0.0.1:8000/mock-l3/sites/{site_id}` as a registered site's `adapter_base_url`."
+            ),
+        },
+        {
+            "name": "mock-broker",
+            "description": "Mock broker flow that predicts, selects a site, and submits a workload through L2.",
+        },
+    ],
     swagger_ui_parameters={"persistAuthorization": True},
 )
 app.mount("/static", StaticFiles(directory="static"), name="static")
