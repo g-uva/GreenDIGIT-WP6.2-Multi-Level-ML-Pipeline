@@ -177,6 +177,7 @@ http://localhost/auth/login
 ```
 
 Token issuance is gated by `allowed_emails.txt` at the repository root. First login sets the password for an allowed email; subsequent logins must use the same password.
+Protected L2 endpoints also check `SITE_ADAPTER_ALLOWED_EMAIL_DOMAINS`; include the domains of any non-institutional allowed emails, such as `gmail.com`, or set it empty to rely only on the explicit allow-list.
 
 Supported allow-list formats:
 

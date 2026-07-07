@@ -8,7 +8,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://m3l2:m3l2@postgres:5432/m3l2
       JWT_SECRET: ${JWT_SECRET}
-      SITE_ADAPTER_ALLOWED_EMAIL_DOMAINS: ${SITE_ADAPTER_ALLOWED_EMAIL_DOMAINS:-uva.nl,uth.gr}
+      SITE_ADAPTER_ALLOWED_EMAIL_DOMAINS: ${SITE_ADAPTER_ALLOWED_EMAIL_DOMAINS:-uva.nl,uth.gr,gmail.com}
       EGI_CHECKIN_ISSUER: ${EGI_CHECKIN_ISSUER:-}
       EGI_CHECKIN_AUDIENCE: ${EGI_CHECKIN_AUDIENCE:-}
     ports:

@@ -85,7 +85,6 @@ def _verify_hs256_jwt(token: str, secret: str) -> dict:
         raise HTTPException(status_code=401, detail="Invalid bearer token time claims") from exc
     return payload
 
-
 def create_site_jwt(email: str, site_id: str, role: SiteRole, secret: str, ttl_hours: int = 24) -> str:
     now = datetime.now(timezone.utc)
     payload = {
